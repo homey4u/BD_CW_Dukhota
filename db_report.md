@@ -94,9 +94,8 @@ CREATE INDEX idx_purchases_customer ON purchases(customer_id);
 
 ---
 
-## 4. Наповнення даними (Seed)
 
-## 5. OLTP запити
+## 4. OLTP запити
 
 ### INSERT запити
 
@@ -227,7 +226,7 @@ ORDER BY tt.type_name;
 
 ---
 
-## 6. OLAP запити
+## 5. OLAP запити
 
 ### Запит 1. Загальний дохід за типом події
 
