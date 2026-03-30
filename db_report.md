@@ -96,13 +96,13 @@ CREATE INDEX idx_purchases_customer ON purchases(customer_id);
 
 ## 4. Наповнення даними (Seed)
 
-<details>
-<summary>Розгорнути INSERT-запити для наповнення таблиць</summary>
-
 ## 5. OLTP запити
 
 ### INSERT запити
 
+<details>
+<summary>Розгорнути INSERT-запити для наповнення таблиць</summary>
+    
 ```sql
 -- Майданчики
 INSERT INTO venues (name, location, capacity) VALUES
