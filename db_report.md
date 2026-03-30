@@ -30,28 +30,7 @@
 
 ## 2. Схема бази даних
 
-```
-venues          events              ticket_types        purchases
-─────────       ──────────────      ────────────────    ──────────────────
-venue_id  ◄─── venue_id            ticket_id  ◄─────── ticket_id
-name            event_id  ◄──────── event_id            purchase_id
-location        event_name          type_name            customer_id ──► customers
-capacity        event_datetime      price                purchase_date    ──────────
-                event_type                               quantity         customer_id
-                                                         total_price      first_name
-                                                                          last_name
-                                                                          email
-                                                                          phone
-```
-
-### Зв'язки між таблицями
-
-| Таблиця | Зовнішній ключ | Посилається на |
-|---|---|---|
-| `events` | `venue_id` | `venues.venue_id` |
-| `ticket_types` | `event_id` | `events.event_id` |
-| `purchases` | `ticket_id` | `ticket_types.ticket_id` |
-| `purchases` | `customer_id` | `customers.customer_id` |
+<img width="915" height="717" alt="image" src="https://github.com/user-attachments/assets/dd90f88c-516f-4584-834c-6e8b651522b5" />
 
 ---
 
@@ -120,6 +99,10 @@ CREATE INDEX idx_purchases_customer ON purchases(customer_id);
 <details>
 <summary>Розгорнути INSERT-запити для наповнення таблиць</summary>
 
+## 5. OLTP запити
+
+### INSERT запити
+
 ```sql
 -- Майданчики
 INSERT INTO venues (name, location, capacity) VALUES
@@ -167,31 +150,9 @@ INSERT INTO ticket_types (event_id, type_name, price) VALUES
 
 ---
 
-## 5. OLTP запити
-
-### INSERT запити
-
-**Запит 1.** Переносимо Stand-Up на дату Океану Ельзи, щоб Олексій міг купити квиток на обидві події в один день (підготовка до перевірки OLAP-запиту №4).
-
-```sql
--- Змінюємо дату Stand-Up (event_id = 3) на 15 червня 2025 року
-UPDATE events
-SET event_datetime = '2025-06-15 16:00:00'
-WHERE event_id = 3;
-```
-
-**Запит 2.** Олексій (customer_id = 1) купує 2 квитки на Stand-Up (ticket_id = 6).
-
-```sql
-INSERT INTO purchases (ticket_id, customer_id, purchase_date, quantity, total_price)
-VALUES (6, 1, CURRENT_TIMESTAMP, 2, 700.00);
-```
-
----
-
 ### UPDATE запити
 
-**Запит 3.** Оновлення ціни VIP-квитків для концерту Океан Ельзи.
+**Запит 1.** Оновлення ціни VIP-квитків для концерту Океан Ельзи.
 
 ```sql
 UPDATE ticket_types
@@ -200,7 +161,7 @@ WHERE event_id = 1
   AND type_name = 'VIP';
 ```
 
-**Запит 4.** Оновлення номера телефону клієнта Олексія Коваленка.
+**Запит 2.** Оновлення номера телефону клієнта Олексія Коваленка.
 
 ```sql
 UPDATE customers
@@ -212,14 +173,14 @@ WHERE customer_id = 1;
 
 ### DELETE запити
 
-**Запит 5.** Видалення окремої покупки (скасування замовлення).
+**Запит 1.** Видалення окремої покупки (скасування замовлення).
 
 ```sql
 DELETE FROM purchases
 WHERE purchase_id = 1;
 ```
 
-**Запит 6.** Видалення події. Завдяки `ON DELETE CASCADE` всі пов'язані типи квитків видаляються автоматично.
+**Запит 2.** Видалення події. Завдяки `ON DELETE CASCADE` всі пов'язані типи квитків видаляються автоматично.
 
 ```sql
 DELETE FROM events
@@ -230,7 +191,7 @@ WHERE event_id = 1;
 
 ### SELECT запити
 
-**Запит 7.** Знайти всі події на конкретному майданчику (наприклад, Олімпійський, `venue_id = 1`).
+**Запит 1.** Знайти всі події на конкретному майданчику (наприклад, Олімпійський, `venue_id = 1`).
 
 ```sql
 SELECT
@@ -246,7 +207,7 @@ WHERE v.venue_id = 1
 ORDER BY e.event_datetime;
 ```
 
-**Запит 8.** Порахувати доступні квитки для події за типом квитка. Доступність розраховується як різниця між місткістю майданчика та вже проданими квитками.
+**Запит 2.** Порахувати доступні квитки для події за типом квитка. Доступність розраховується як різниця між місткістю майданчика та вже проданими квитками.
 
 ```sql
 SELECT
@@ -323,6 +284,22 @@ ORDER BY avg_ticket_price DESC;
 
 ### Запит 4. Клієнти, які купили квитки на декілька подій в один день
 
+**Запит 1.** Переносимо Stand-Up на дату Океану Ельзи, щоб Олексій міг купити квиток на обидві події в один день (підготовка до перевірки OLAP-запиту №4).
+
+```sql
+-- Змінюємо дату Stand-Up (event_id = 3) на 15 червня 2025 року
+UPDATE events
+SET event_datetime = '2025-06-15 16:00:00'
+WHERE event_id = 3;
+```
+
+**Запит 2.** Олексій (customer_id = 1) купує 2 квитки на Stand-Up (ticket_id = 6).
+
+```sql
+INSERT INTO purchases (ticket_id, customer_id, purchase_date, quantity, total_price)
+VALUES (6, 1, CURRENT_TIMESTAMP, 2, 700.00);
+```
+
 Функція `DATE()` зрізає час з `event_datetime`, залишаючи лише дату. `HAVING COUNT(DISTINCT e.event_id) > 1` відфільтровує лише тих клієнтів, у яких більше однієї унікальної події припадає на ту саму дату.
 
 ```sql
@@ -339,4 +316,3 @@ GROUP BY c.customer_id, c.first_name, c.last_name, DATE(e.event_datetime)
 HAVING COUNT(DISTINCT e.event_id) > 1;
 ```
 
-> **Очікуваний результат:** Після виконання підготовчих OLTP-запитів (UPDATE події №3 + INSERT покупки для Олексія) цей запит поверне Олексія Коваленка, який придбав квитки на Концерт Океан Ельзи та Stand-Up — обидві події відбуваються 15 червня 2025 року.
